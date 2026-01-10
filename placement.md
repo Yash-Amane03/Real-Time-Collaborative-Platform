@@ -70,6 +70,10 @@ graph TD
 - `GET /` - Fetch user's groups.
 - `PUT /:id/add` - Add member to group (Host only).
 
+### Message Management (`/api/messages`)
+- `GET /:roomId` - Fetch chat history.
+    - **Security**: Validates user membership (Group) or participation (DM) before returning data.
+
 ### File Management (`/api/files`)
 - `GET /` - Fetch all files/folders for the logged-in user.
 - `POST /` - Create a new file or folder.

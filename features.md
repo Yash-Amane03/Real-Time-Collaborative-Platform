@@ -56,3 +56,11 @@
     - *Implementation*: Displays group name rooted in center, active member avatars (with overflow count), and online status indicators.
 - **Responsive Chat Sidebar**:
     - *Implementation*: "My Groups" and "Direct Messages" sections with toggleable visibility.
+
+## 5. Security & Privacy
+- **Role-Based Access Control (RBAC)**: Strict server-side validation ensures only group members can access chat history.
+    - *Implementation*: Middleware checks user ID against Group Members array before returning messages.
+- **Private Direct Messages**: DM Access is strictly limited to the two participants.
+    - *Implementation*: Composite Room ID validation (`user1_user2`) prevents unauthorized access.
+- **Protected Routes**: All API endpoints require valid JWT authentication.
+    - *Implementation*: `authMiddleware.js` verifies tokens on every request.

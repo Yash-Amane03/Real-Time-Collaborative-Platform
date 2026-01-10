@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import FileExplorer from '../components/fileExplorer/FileExplorer';
 import Chat from '../components/chat/Chat';
+import ChatList from '../components/chat/ChatList';
 import EditorCanvas from '../components/EditorCanvas';
 import { Code, PenTool } from 'lucide-react';
 
@@ -14,9 +15,15 @@ const Dashboard = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [fileContent, setFileContent] = useState('// Select a file to view or edit');
 
+    // Chat State
+    const [activeChat, setActiveChat] = useState({ type: 'room', id: 'general', name: 'General' });
+
     // Sidebar Widths States
-    const [leftSidebarWidth, setLeftSidebarWidth] = useState(200); // Default reduced to 200px
-    const [rightSidebarWidth, setRightSidebarWidth] = useState(320); // Default 20rem (320px)
+    const [leftSidebarWidth, setLeftSidebarWidth] = useState(250);
+    const [rightSidebarWidth, setRightSidebarWidth] = useState(320);
+
+    // Left Sidebar Vertical Split State (Height % of top section)
+    const [topSectionHeight, setTopSectionHeight] = useState(50);
 
     // Handle File Selection from Explorer
     const handleFileSelect = (file) => {
@@ -35,7 +42,6 @@ const Dashboard = () => {
 
         const doDrag = (mouseMoveEvent) => {
             const newWidth = startWidth + (mouseMoveEvent.clientX - startX);
-            // Min 160px, Max 480px
             if (newWidth >= 160 && newWidth <= 480) {
                 setLeftSidebarWidth(newWidth);
             }
@@ -51,6 +57,36 @@ const Dashboard = () => {
         document.addEventListener('mouseup', stopDrag);
         document.body.style.cursor = 'col-resize';
     }, [leftSidebarWidth]);
+
+    const startResizingVertical = React.useCallback((mouseDownEvent) => {
+        mouseDownEvent.preventDefault();
+        const startY = mouseDownEvent.clientY;
+        const startHeight = topSectionHeight;
+
+        // Get total height of sidebar to calculate percentage
+        const sidebarHeight = mouseDownEvent.target.parentElement.offsetHeight;
+
+        const doDrag = (mouseMoveEvent) => {
+            const deltaPixels = mouseMoveEvent.clientY - startY;
+            const deltaPercentage = (deltaPixels / sidebarHeight) * 100;
+            const newHeight = startHeight + deltaPercentage;
+
+            // Restrict between 20% and 80%
+            if (newHeight >= 20 && newHeight <= 80) {
+                setTopSectionHeight(newHeight);
+            }
+        };
+
+        const stopDrag = () => {
+            document.removeEventListener('mousemove', doDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.body.style.cursor = 'default';
+        };
+
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('mouseup', stopDrag);
+        document.body.style.cursor = 'row-resize';
+    }, [topSectionHeight]);
 
     const startResizingRight = React.useCallback((mouseDownEvent) => {
         mouseDownEvent.preventDefault();
@@ -99,23 +135,67 @@ const Dashboard = () => {
 
                 {/* Left Sidebar - Desktop (Resizable) */}
                 <div
-                    className="hidden md:flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 relative transition-none"
+                    className="hidden md:flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 relative transition-none h-full"
                     style={{ width: leftSidebarWidth }}
                 >
-                    <FileExplorer onFileSelect={handleFileSelect} />
-                    {/* Left Resizer Handle */}
+                    {/* Top Section: File Explorer */}
+                    <div
+                        className="flex-col overflow-hidden flex border-b border-gray-200 dark:border-gray-700 relative"
+                        style={{ height: `${topSectionHeight}%` }}
+                    >
+                        <div className="flex-1 overflow-auto">
+                            <FileExplorer onFileSelect={handleFileSelect} />
+                        </div>
+                    </div>
+
+                    {/* Vertical Resizer Handle */}
+                    <div
+                        className="h-1 cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 transition-colors z-10 w-full flex-shrink-0"
+                        onMouseDown={startResizingVertical}
+                    />
+
+                    {/* Bottom Section: Chat List (Public/Private Names) */}
+                    <div
+                        className="flex flex-col overflow-hidden bg-white dark:bg-gray-800"
+                        style={{ height: `${100 - topSectionHeight}%` }}
+                    >
+                        <ChatList onSelectChat={setActiveChat} />
+                    </div>
+
+                    {/* Left Resizer Handle (Width) */}
                     <div
                         className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors z-50 opacity-0 hover:opacity-100 active:opacity-100 active:bg-blue-600"
                         onMouseDown={startResizingLeft}
                     />
                 </div>
 
-                {/* Left Sidebar - Mobile (Drawer - Fixed Width) */}
-                <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 md:hidden shadow-xl transform transition-transform duration-300 ease-in-out ${isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                    <FileExplorer onFileSelect={handleFileSelect} />
+                {/* Left Sidebar - Mobile (Drawer) */}
+                <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 md:hidden shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col ${isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                    <div
+                        className="flex-col overflow-hidden flex border-b border-gray-200 dark:border-gray-700 relative"
+                        style={{ height: `${topSectionHeight}%` }}
+                    >
+                        <div className="flex-1 overflow-auto">
+                            <FileExplorer onFileSelect={handleFileSelect} />
+                        </div>
+                    </div>
+
+                    {/* Vertical Resizer Handle (Mobile) */}
+                    <div
+                        className="h-1 cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 transition-colors z-10 w-full flex-shrink-0"
+                        onMouseDown={startResizingVertical}
+                    />
+
+                    <div
+                        className="flex flex-col overflow-hidden bg-white dark:bg-gray-800"
+                        style={{ height: `${100 - topSectionHeight}%` }}
+                    >
+                        <ChatList onSelectChat={setActiveChat} />
+                    </div>
+
                     <button
                         onClick={() => setIsLeftSidebarOpen(false)}
-                        className="absolute top-2 right-2 p-1 bg-gray-200 dark:bg-gray-700 rounded-full"
+                        className="absolute top-2 right-2 p-1 bg-gray-200 dark:bg-gray-700 rounded-full z-50"
                     >
                         ✕
                     </button>
@@ -154,11 +234,11 @@ const Dashboard = () => {
                         className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors z-50 opacity-0 hover:opacity-100 active:opacity-100 active:bg-blue-600"
                         onMouseDown={startResizingRight}
                     />
-                    <Chat />
+                    <Chat activeChat={activeChat} />
                 </div>
 
                 {/* Right Sidebar - Mobile (Drawer - Fixed Width) */}
-                <div className={`fixed inset-y-0 right-0 z-40 w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 md:hidden shadow-xl transform transition-transform duration-300 ease-in-out ${isRightSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                <div className={`fixed inset-y-0 right-0 z-50 w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 md:hidden shadow-xl transform transition-transform duration-300 ease-in-out ${isRightSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                     <Chat />
                     <button
                         onClick={() => setIsRightSidebarOpen(false)}
@@ -167,6 +247,7 @@ const Dashboard = () => {
                         ✕
                     </button>
                 </div>
+
             </div>
         </div>
     );

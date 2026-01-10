@@ -5,19 +5,24 @@ The application follows the **MERN Stack** architecture (Monolithic Repo structu
 
 ```mermaid
 graph TD
-    Client[Frontend (React + Vite)] <--> API[Backend API (Express)]
+    Client[Frontend (React + Vite)] <-->|HTTP REST| API[Backend API (Express)]
+    Client <-->|WebSocket| Socket[Socket.IO Server]
     API <--> DB[(MongoDB Database)]
+    Socket <--> API
     
     subgraph Frontend
         UI[UI Components]
         State[State Management]
         Router[React Router]
+        SocketClient[Socket Client]
     end
     
     subgraph Backend
         Auth[Auth Controller]
         FileSys[File Controller]
+        GroupSys[Group Controller]
         Models[Mongoose Models]
+        SocketHandler[Socket Event Handlers]
     end
 ```
 
@@ -30,6 +35,16 @@ graph TD
 | `name` | String | User's full name |
 | `email` | String | User's email (Unique) |
 | `password` | String | Hashed password (Bcrypt) |
+| `createdAt` | Date | Timestamp |
+
+### Group Collection
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `_id` | ObjectId | Unique identifier |
+| `name` | String | Group Name |
+| `description` | String | Optional description |
+| `host` | ObjectId | Reference to User (Host) |
+| `members` | Array<ObjectId> | List of User References |
 | `createdAt` | Date | Timestamp |
 
 ### File Collection
@@ -48,6 +63,12 @@ graph TD
 ### Authentication (`/api/users`)
 - `POST /` - Register a new user.
 - `POST /login` - Authenticate user & get JWT.
+- `GET /` - Get all users (searchable) for DMs/Invites.
+
+### Group Management (`/api/groups`)
+- `POST /` - Create a new group.
+- `GET /` - Fetch user's groups.
+- `PUT /:id/add` - Add member to group (Host only).
 
 ### File Management (`/api/files`)
 - `GET /` - Fetch all files/folders for the logged-in user.

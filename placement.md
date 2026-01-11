@@ -5,9 +5,9 @@ The application follows the **MERN Stack** architecture (Monolithic Repo structu
 
 ```mermaid
 graph TD
-    Client[Frontend (React + Vite)] <-->|HTTP REST| API[Backend API (Express)]
-    Client <-->|WebSocket| Socket[Socket.IO Server]
-    API <--> DB[(MongoDB Database)]
+    Client["Frontend (React + Vite)"] <-->|HTTP REST| API["Backend API (Express)"]
+    Client <-->|WebSocket| Socket["Socket.IO Server"]
+    API <--> DB[("MongoDB Database")]
     Socket <--> API
     
     subgraph Frontend

@@ -58,6 +58,33 @@ graph TD
 | `content` | String | File content (empty for folders) |
 | `createdAt` | Date | Timestamp |
 
+#### Implementation (Mongoose Schemas)
+```javascript
+// User Schema
+const UserSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    isAdmin: { type: Boolean, default: false },
+}, { timestamps: true });
+
+// Group Schema
+const GroupSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    host: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+}, { timestamps: true });
+
+// File Schema
+const FileSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    name: { type: String, required: true },
+    type: { type: String, enum: ['file', 'folder'] },
+    parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'File' },
+    content: { type: String, default: '' },
+}, { timestamps: true });
+```
+
 ## 3. API Routes
 
 ### Authentication (`/api/users`)

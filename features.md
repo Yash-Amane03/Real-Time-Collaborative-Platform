@@ -2,65 +2,104 @@
 
 ## 1. Authentication
 - **Secure Login & Signup**: JWT-based authentication with password hashing (Bcrypt).
-    - *Implementation*: `authController.js` handles logic. `bcryptjs` salts and hashes passwords.
+    - *Implementation*: `authController.js` handles logic.
+    ```javascript
+    // Verify password during login
+    if (user && (await bcrypt.compare(password, user.password))) {
+        res.json({ _id: user.id, token: generateToken(user.id) });
+    }
+    ```
 - **Session Management**: User tokens are stored securely.
-    - *Implementation*: `jsonwebtoken` generates tokens, stored in local storage/HTTP headers. `protect` middleware verifies them.
-- **Quick Login**: Pre-configured test accounts (Alice/Bob) for rapid development testing.
+    - *Implementation*: Stored in `localStorage`.
+    ```javascript
+    // Frontend: Store User Info
+    localStorage.setItem('userInfo', JSON.stringify(data));
+    ```
 
 ## 2. Dashboard Interface
-### Navbar
+### Navbar & Sidebars
 - **Responsive Navigation**: Adapts to mobile and desktop screens.
-    - *Implementation*: Flexbox with `hidden` and `block` classes based on Tailwind breakpoints (`md:`).
-- **User Profile**: Displays user initials with a dynamic gradient background.
-    - *Implementation*: Helper function extracts initials from `userInfo.name` stored in localStorage.
+    - *Implementation*: Tailwind classes `hidden md:flex` for desktop, `fixed inset-0` for mobile drawers.
+- **Drag-to-Resize**: Resizable sidebars.
+    - *Implementation*:
+    ```javascript
+    const startResizing = (mouseDown) => {
+        const startX = mouseDown.clientX;
+        const doDrag = (e) => setWidth(startWidth + (e.clientX - startX));
+        document.addEventListener('mousemove', doDrag);
+    };
+    ```
 
-### Sidebars (Resizable)
-- **Drag-to-Resize**: Both the File Explorer and Chat sidebars can be resized.
-    - *Implementation*: `Dashboard.jsx` uses `mousedown` listeners on global `window` to track cursor movement and update `width` state.
-- **File Explorer (Left)**: Recursive tree structure.
-    - *Implementation*: `FileExplorer.jsx` fetches flat data from MongoDB and constructs a tree. `FileItem` component recursively calls itself for folders.
-
-### Main Workspace (Middle Area)
-- **Dual View Support**: Switch seamlessly between **Code Editor** and **Canvas** modes.
-    - *Implementation*: Conditional rendering in React based on `activeView` state ('editor' | 'canvas').
-- **Canvas View**: Whiteboard area.
-    - *Implementation*: HTML5 Canvas API (or upcoming library integration).
-- **Code Editor View**: Syntax-highlighted editor.
-    - *Implementation*: `CodeEditor.jsx` wrappers around `<textarea>` or usage of `monaco-editor`/`codemirror` (planned/basic version).
+### Main Workspace
+- **Dual View Support**: Switch between Code Editor and Canvas.
+    - *Implementation*:
+    ```javascript
+    {activeView === 'editor' ? <CodeEditor /> : <Canvas />}
+    ```
 
 ### File Management
-- **File & Folder Operations**: Create, delete, and rename.
-    - *Implementation*: REST API endpoints (`/api/files`) using Mongoose. `File` model stores strict `parentId` references for hierarchy.
-- **Extension validation**: Enforces strict file extensions: `.java`, `.py`, `.c`, `.cpp`, `.txt`.
-    - *Implementation*: Frontend regex/split check in `handleCreate`. Backend validation can also be added.
-- **Smart Icons**: Displays specific icons for supported file types.
-    - *Implementation*: `lucide-react` icons mapped based on file extension parsing.
-- **Drag-and-Drop Organization**: Move files/folders.
-    - *Implementation*: Native HTML5 DnD API (`draggable`, `onDragStart`, `onDrop`). `updateFile` endpoint handles the `parentId` change.
-
-## 3. UI/UX Enhancements
-- **Dark Mode Support**: Fully integrated dark theme.
-    - *Implementation*: Tailwind's `dark:` modifier. State persisted in `localStorage`.
-- **Responsive Design**: Mobile drawers and adaptive layout.
-    - *Implementation*: Absolute positioning for drawers on mobile (`z-index`), Flexbox for column layout.
+- **File Operations**: Create/Delete/Rename via API.
+    - *Implementation*:
+    ```javascript
+    // Service: Create File
+    await axios.post('/api/files', { name, type: 'file', parentId });
+    ```
+- **Drag-and-Drop**: HTML5 Draggable API.
+    - *Implementation*:
+    ```javascript
+    <div draggable onDragStart={(e) => e.dataTransfer.setData("fileId", file._id)}>
+        {file.name}
+    </div>
+    ```
 
 ## 4. Communication Features
-- **Real-Time Chat**: Instant messaging powered by Socket.IO.
-    - *Implementation*: `socket.io-client` on frontend connects to `socket.io` instance on backend. Rooms distinguish between Public, Private, and Group chats.
-- **Group Management**: Users can create private groups.
-    - *Implementation*: `Group` model in MongoDB. Host-based permissions for inviting members.
-    - **Invite System**: Hosts can search and invite users via a modal interface.
-- **Direct Messages**: 1-on-1 private conversations.
-    - *Implementation*: Room ID generated by sorting participant IDs (`userId1_userId2`) to ensure uniqueness and consistency.
-- **Smart Headers**: Context-aware chat headers.
-    - *Implementation*: Displays group name rooted in center, active member avatars (with overflow count), and online status indicators.
-- **Responsive Chat Sidebar**:
-    - *Implementation*: "My Groups" and "Direct Messages" sections with toggleable visibility.
+- **Real-Time Chat**: Socket.IO integration.
+    - *Implementation*:
+    ```javascript
+    // Frontend: Listen for messages
+    useEffect(() => {
+        socket.on('receive_message', (msg) => setMessages(prev => [...prev, msg]));
+    }, []);
+    ```
+- **Group Management**: MongoDB Group Schema.
+    - *Implementation*:
+    ```javascript
+    const GroupSchema = new Schema({
+        name: String,
+        host: { type: ObjectId, ref: 'User' },
+        members: [{ type: ObjectId, ref: 'User' }]
+    });
+    ```
+- **Direct Messages**: Unique Room ID generation.
+    - *Implementation*: `roomId = [uid1, uid2].sort().join('_')` ensures consistence.
 
 ## 5. Security & Privacy
 - **Role-Based Access Control (RBAC)**: Strict server-side validation ensures only group members can access chat history.
     - *Implementation*: Middleware checks user ID against Group Members array before returning messages.
+    ```javascript
+    // Backend: Verify Group Membership
+    const isMember = group.members.includes(req.user._id);
+    if (!isMember) return res.status(403).json({ message: 'Forbidden' });
+    ```
 - **Private Direct Messages**: DM Access is strictly limited to the two participants.
     - *Implementation*: Composite Room ID validation (`user1_user2`) prevents unauthorized access.
+    ```javascript
+    // Backend: Verify DM Participants
+    const participants = roomId.split('_');
+    if (!participants.includes(req.user._id.toString())) {
+        return res.status(403).json({ message: 'Unauthorized' });
+    }
+    ```
 - **Protected Routes**: All API endpoints require valid JWT authentication.
     - *Implementation*: `authMiddleware.js` verifies tokens on every request.
+    ```javascript
+    // Middleware: Protect Route
+    const protect = asyncHandler(async (req, res, next) => {
+        if (req.headers.authorization?.startsWith('Bearer')) {
+             token = req.headers.authorization.split(' ')[1];
+             const decoded = jwt.verify(token, process.env.JWT_SECRET);
+             req.user = await User.findById(decoded.id).select('-password');
+             next();
+        }
+    });
+    ```

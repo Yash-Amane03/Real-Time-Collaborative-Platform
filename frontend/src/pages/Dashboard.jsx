@@ -190,7 +190,11 @@ const Dashboard = () => {
                         className="flex flex-col overflow-hidden bg-white dark:bg-gray-800"
                         style={{ height: `${100 - topSectionHeight}%` }}
                     >
-                        <ChatList onSelectChat={setActiveChat} />
+                        <ChatList onSelectChat={(chat) => {
+                            setActiveChat(chat);
+                            setIsLeftSidebarOpen(false);
+                            setIsRightSidebarOpen(true);
+                        }} />
                     </div>
 
                     <button
@@ -239,7 +243,7 @@ const Dashboard = () => {
 
                 {/* Right Sidebar - Mobile (Drawer - Fixed Width) */}
                 <div className={`fixed inset-y-0 right-0 z-50 w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 md:hidden shadow-xl transform transition-transform duration-300 ease-in-out ${isRightSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                    <Chat />
+                    <Chat activeChat={activeChat} />
                     <button
                         onClick={() => setIsRightSidebarOpen(false)}
                         className="absolute top-2 left-2 p-1 bg-gray-200 dark:bg-gray-700 rounded-full"

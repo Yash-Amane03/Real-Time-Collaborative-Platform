@@ -74,6 +74,46 @@ io.on('connection', (socket) => {
         }
     });
 
+    // --- CANVAS EVENTS ---
+    socket.on('canvas_update', (data) => {
+        // data: { roomId, element, action: 'add' | 'update' | 'delete' }
+        socket.to(data.roomId).emit('canvas_update', data);
+    });
+
+    socket.on('cursor_move', (data) => {
+        // data: { roomId, userId, userName, x, y }
+        socket.to(data.roomId).emit('cursor_move', data);
+    });
+
+    socket.on('canvas_action', (data) => {
+        // data: { roomId, action: 'undo' | 'redo' | 'clear' }
+        socket.to(data.roomId).emit('canvas_action', data);
+    });
+
+    socket.on('toggle_permission', async (data) => {
+        // data: { roomId, canDraw }
+        try {
+            // Update Group in DB
+            const Group = require('./models/Group');
+            await Group.findByIdAndUpdate(data.roomId, { drawingPermission: data.canDraw });
+
+            // Broadcast to room
+            io.in(data.roomId).emit('permission_update', { canDraw: data.canDraw });
+        } catch (error) {
+            console.error('Error updating permission:', error);
+        }
+    });
+
+    socket.on('disconnecting', () => {
+        const rooms = socket.rooms;
+        rooms.forEach((roomId) => {
+            if (roomId !== socket.id) {
+                socket.to(roomId).emit('user_left', { userId: socket.id });
+                console.log(`User ${socket.id} left room ${roomId} (disconnecting)`);
+            }
+        });
+    });
+
     socket.on('disconnect', () => {
         console.log('User Disconnected', socket.id);
     });

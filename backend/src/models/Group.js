@@ -22,6 +22,10 @@ const groupSchema = mongoose.Schema(
                 ref: 'User',
             },
         ],
+        drawingPermission: {
+            type: Boolean,
+            default: true,
+        },
     },
     {
         timestamps: true,

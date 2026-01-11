@@ -14,9 +14,19 @@ const Dashboard = () => {
     // File System State
     const [selectedFile, setSelectedFile] = useState(null);
     const [fileContent, setFileContent] = useState('// Select a file to view or edit');
+    const [filePath, setFilePath] = useState('');
 
     // Chat State
-    const [activeChat, setActiveChat] = useState({ type: 'room', id: 'general', name: 'General' });
+    // Chat State with Persistence
+    const [activeChat, setActiveChat] = useState(() => {
+        const savedChat = localStorage.getItem('activeChat');
+        return savedChat ? JSON.parse(savedChat) : { type: 'room', id: 'general', name: 'General' };
+    });
+
+    // Persist Active Chat
+    React.useEffect(() => {
+        localStorage.setItem('activeChat', JSON.stringify(activeChat));
+    }, [activeChat]);
 
     // Sidebar Widths States
     const [leftSidebarWidth, setLeftSidebarWidth] = useState(250);
@@ -26,10 +36,11 @@ const Dashboard = () => {
     const [topSectionHeight, setTopSectionHeight] = useState(50);
 
     // Handle File Selection from Explorer
-    const handleFileSelect = (file) => {
+    const handleFileSelect = (file, path) => {
         setSelectedFile(file);
         if (file && file.type === 'file') {
             setFileContent(file.content || '');
+            setFilePath(path || file.name); // Fallback to name if path missing
             setActiveView('editor'); // Switch to editor when a file is opened
         }
     };
@@ -113,6 +124,9 @@ const Dashboard = () => {
         document.body.style.cursor = 'col-resize';
     }, [rightSidebarWidth]);
 
+    const currentUser = JSON.parse(localStorage.getItem('userInfo')) || {};
+    const isHost = activeChat?.host === currentUser._id || activeChat?.host === currentUser.id;
+
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
             <Navbar
@@ -132,6 +146,8 @@ const Dashboard = () => {
                         }}
                     />
                 )}
+
+                {/* ... Sidebars ... */}
 
                 {/* Left Sidebar - Desktop (Resizable) */}
                 <div
@@ -224,7 +240,14 @@ const Dashboard = () => {
 
                     {/* Main Content Content */}
                     <div className="flex-1 overflow-hidden relative">
-                        <EditorCanvas view={activeView} fileContent={fileContent} />
+                        <EditorCanvas
+                            view={activeView}
+                            fileContent={fileContent}
+                            filePath={filePath}
+                            roomId={activeChat?.id || activeChat?._id || 'general'}
+                            isHost={isHost}
+                            userName={currentUser.name}
+                        />
                     </div>
                 </div>
 

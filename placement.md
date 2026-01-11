@@ -12,8 +12,9 @@ graph TD
     
     subgraph Frontend
         UI[UI Components]
-        State[State Management]
+        State[State Management (React Hooks)]
         Router[React Router]
+        Canvas[Infinite Canvas Engine]
         SocketClient[Socket Client]
     end
     
@@ -42,88 +43,38 @@ graph TD
 | :--- | :--- | :--- |
 | `_id` | ObjectId | Unique identifier |
 | `name` | String | Group Name |
-| `description` | String | Optional description |
 | `host` | ObjectId | Reference to User (Host) |
 | `members` | Array<ObjectId> | List of User References |
+| `drawingPermission` | Boolean | Host permission control (Default: true) |
 | `createdAt` | Date | Timestamp |
 
 ### File Collection
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `_id` | ObjectId | Unique identifier |
-| `user` | ObjectId | Reference to User |
-| `name` | String | File or Folder name |
+| `user` | ObjectId | Reference to User (Owner) |
+| `name` | String | File/Folder name |
 | `type` | String | 'file' or 'folder' |
 | `parentId` | ObjectId | Reference to parent Folder (null for root) |
-| `content` | String | File content (empty for folders) |
+| `content` | String | File content (text) |
 | `createdAt` | Date | Timestamp |
 
-#### Implementation (Mongoose Schemas)
-```javascript
-// User Schema
-const UserSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    isAdmin: { type: Boolean, default: false },
-}, { timestamps: true });
-
-// Group Schema
-const GroupSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    host: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-}, { timestamps: true });
-
-// File Schema
-const FileSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    name: { type: String, required: true },
-    type: { type: String, enum: ['file', 'folder'] },
-    parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'File' },
-    content: { type: String, default: '' },
-}, { timestamps: true });
-```
-
-## 3. API Routes
-
-### Authentication (`/api/users`)
-- `POST /` - Register a new user.
-- `POST /login` - Authenticate user & get JWT.
-- `GET /` - Get all users (searchable) for DMs/Invites.
-
-### Group Management (`/api/groups`)
-- `POST /` - Create a new group.
-- `GET /` - Fetch user's groups.
-- `PUT /:id/add` - Add member to group (Host only).
-
-### Message Management (`/api/messages`)
-- `GET /:roomId` - Fetch chat history.
-    - **Security**: Validates user membership (Group) or participation (DM) before returning data.
-
-### File Management (`/api/files`)
-- `GET /` - Fetch all files/folders for the logged-in user.
-- `POST /` - Create a new file or folder.
-    - Body: `{ name, type, parentId }`
-- `PUT /:id` - Update file content, rename, or move (DnD).
-    - Body: `{ name, content, parentId }`
-- `DELETE /:id` - Delete a file or folder (and its children).
-
-## 4. Application Flow
-
-1.  **Authentication**: User logs in/registers. JWT is stored.
-2.  **Dashboard Load**: Client fetches user's file structure from `/api/files`.
-3.  **File Explorer**:
-    -   Recursive tree renders files/folders.
-    -   **Drag & Drop**: Users can move files into folders or to the root using HTML5 DnD.
-    -   **Creation**: Users create files (strict extension validation: .java, .py, .c, .cpp, .txt).
-4.  **Editing**:
-    -   Clicking a file loads its content into the central **Code Editor**.
-    -   Dual View allows switching between Code and Canvas.
-
-## 5. Implemented Features
--   **Secure Auth**: JWT + Bcrypt.
--   **Dynamic File Explorer**: Recursive folder structure with Drag-and-Drop capability.
--   **Strict Validation**: File creation enforced to specific programming extensions.
--   **Resizable Layout**: draggable sidebars for custom workspace setup.
--   **Theme Support**: Dark/Light mode toggle.
+## 3. Implemented Features
+-   **Authentication**: JWT + Bcrypt for secure login/signup.
+-   **File System**:
+    -   CRUD operations for files and folders.
+    -   Recursive structure.
+    -   Drag and Drop organization.
+-   **Infinite Canvas**:
+    -   Vector-based drawing engine (Pencil, Shapes, Text).
+    -   **Real-Time Collaboration**: Multi-user sync, live cursors, and host permissions.
+    -   Selection, Drag-to-Move, Pan, and Zoom.
+    -   Mobile-responsive toolbar with auto-hide logic.
+-   **Communication**:
+    -   Real-time chat using Socket.IO.
+    -   Private Groups and Direct Messages.
+    -   Persistent chat history stored in MongoDB.
+-   **UI/UX**:
+    -   Glassmorphism (Frosted glass effects).
+    -   Responsive Layout (Mobile/Desktop adaptive).
+    -   Resizable Sidebars (Drag handle).

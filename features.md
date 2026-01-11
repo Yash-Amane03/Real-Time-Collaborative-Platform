@@ -3,103 +3,79 @@
 ## 1. Authentication
 - **Secure Login & Signup**: JWT-based authentication with password hashing (Bcrypt).
     - *Implementation*: `authController.js` handles logic.
+    - **Frontend**: Protected Routes wrapper ensures only authenticated users access the Dashboard.
     ```javascript
     // Verify password during login
     if (user && (await bcrypt.compare(password, user.password))) {
         res.json({ _id: user.id, token: generateToken(user.id) });
     }
     ```
-- **Session Management**: User tokens are stored securely.
-    - *Implementation*: Stored in `localStorage`.
-    ```javascript
-    // Frontend: Store User Info
-    localStorage.setItem('userInfo', JSON.stringify(data));
-    ```
+- **Session Management**: User tokens are stored securely in `localStorage`.
 
 ## 2. Dashboard Interface
-### Navbar & Sidebars
+### Navbar & Resizable Sidebars
 - **Responsive Navigation**: Adapts to mobile and desktop screens.
-    - *Implementation*: Tailwind classes `hidden md:flex` for desktop, `fixed inset-0` for mobile drawers.
-- **Drag-to-Resize**: Resizable sidebars.
-    - *Implementation*:
-    ```javascript
-    const startResizing = (mouseDown) => {
-        const startX = mouseDown.clientX;
-        const doDrag = (e) => setWidth(startWidth + (e.clientX - startX));
-        document.addEventListener('mousemove', doDrag);
-    };
-    ```
+    - *Implementation*: Tailwind CSS classes (`hidden md:flex`) show/hide elements. Mobile drawers use `fixed inset-0` with transitions.
+- **Drag-to-Resize**: Sidebars can be resized by dragging the edge.
+    - *Implementation*: Mouse event listeners (`mousemove`, `mouseup`) update width state dynamically.
 
 ### Main Workspace
-- **Dual View Support**: Switch between Code Editor and Canvas.
-    - *Implementation*:
+- **Dual View Support**: Seamlessly switch between **Code Editor** and **Canvas**.
+    - *Logic*: Conditional rendering based on `activeView` state.
     ```javascript
     {activeView === 'editor' ? <CodeEditor /> : <Canvas />}
     ```
+- **File Path Breadcrumbs**: Displays full directory path in editor header using recursive parent traversal.
 
-### File Management
-- **File Operations**: Create/Delete/Rename via API.
-    - *Implementation*:
-    ```javascript
-    // Service: Create File
-    await axios.post('/api/files', { name, type: 'file', parentId });
-    ```
-- **Drag-and-Drop**: HTML5 Draggable API.
-    - *Implementation*:
-    ```javascript
-    <div draggable onDragStart={(e) => e.dataTransfer.setData("fileId", file._id)}>
-        {file.name}
-    </div>
-    ```
+### 3. Infinite Canvas (Whiteboard)
+- **Infinite Space**: Pan and Zoom support with a dynamic dot grid.
+    - *Math*: `screenToWorld` and `worldToScreen` transformation functions handle coordinate mapping based on `offset` (pan) and `scale` (zoom).
+- **Vector-Based Rendering**: Shapes are stored as state objects (`{ type, x1, y1, ... }`) and re-rendered on the HTML5 Canvas 2D context.
+    - *Optimization*: Uses `requestAnimationFrame` (via React render cycle) to only re-draw when state changes.
+- **Tools**:
+    - **Pencil/Eraser**: Freehand drawing using array of points.
+    - **Shapes**: Rectangle, Circle, Line using mathematical geometry.
+    - **Text**: Interactive text overlay that commits to canvas on blur/enter.
+    - **Selection**: Hit-testing algorithms (`isWithinElement`) detect clicks on vector shapes for moving/editing.
+- **Mobile Responsive Toolbar**:
+    - **Auto-Hide**: Toolbar automatically hides on tool selection (Mobile) to maximize drawing space.
+    - **Bottom Layout**: Toolkit positioned at bottom-screen for thumb accessibility on phones.
 
-## 4. Communication Features
-- **Real-Time Chat**: Socket.IO integration.
-    - *Implementation*:
-    ```javascript
-    // Frontend: Listen for messages
-    useEffect(() => {
-        socket.on('receive_message', (msg) => setMessages(prev => [...prev, msg]));
-    }, []);
-    ```
-- **Group Management**: MongoDB Group Schema.
-    - *Implementation*:
-    ```javascript
-    const GroupSchema = new Schema({
-        name: String,
-        host: { type: ObjectId, ref: 'User' },
-        members: [{ type: ObjectId, ref: 'User' }]
-    });
-    ```
-- **Direct Messages**: Unique Room ID generation.
-    - *Implementation*: `roomId = [uid1, uid2].sort().join('_')` ensures consistence.
+### 4. Real-Time Collaboration (New)
+- **Multi-User Sync**:
+    - **Drawing**: Instant replication of strokes and shapes across all connected clients in the room using Socket.IO `canvas_update` events.
+        ```javascript
+        socket.emit('canvas_update', { roomId, element: newElement, action: 'add' });
+        ```
+    - **Action Sync**: Synchronized `Undo`, `Redo`, and `Clear` actions ensure all users view the same canvas state.
+        ```javascript
+        socket.emit('canvas_action', { roomId, action: 'undo' });
+        ```
+- **Presence**:
+    - **Live Cursors**: Visual tracking of other users' mouse movements with their real names displayed.
+        ```javascript
+        socket.emit('cursor_move', { roomId, userId, userName, x, y });
+        ```
+    - **Auto-Cleanup**: Cursors are automatically removed when a user disconnects or leaves the room.
+- **Host Controls**:
+    - **Permissions**: Group hosts can "Lock" the canvas, disabling drawing tools for all other members.
+        ```javascript
+        socket.emit('toggle_permission', { roomId, canDraw: newPermission });
+        ```
+    - **UI Indicators**: Toolbar shows a Lock/Unlock icon for hosts; members receive alerts if they try to draw while locked.
 
-## 5. Security & Privacy
-- **Role-Based Access Control (RBAC)**: Strict server-side validation ensures only group members can access chat history.
-    - *Implementation*: Middleware checks user ID against Group Members array before returning messages.
-    ```javascript
-    // Backend: Verify Group Membership
-    const isMember = group.members.includes(req.user._id);
-    if (!isMember) return res.status(403).json({ message: 'Forbidden' });
-    ```
-- **Private Direct Messages**: DM Access is strictly limited to the two participants.
-    - *Implementation*: Composite Room ID validation (`user1_user2`) prevents unauthorized access.
-    ```javascript
-    // Backend: Verify DM Participants
-    const participants = roomId.split('_');
-    if (!participants.includes(req.user._id.toString())) {
-        return res.status(403).json({ message: 'Unauthorized' });
-    }
-    ```
-- **Protected Routes**: All API endpoints require valid JWT authentication.
-    - *Implementation*: `authMiddleware.js` verifies tokens on every request.
-    ```javascript
-    // Middleware: Protect Route
-    const protect = asyncHandler(async (req, res, next) => {
-        if (req.headers.authorization?.startsWith('Bearer')) {
-             token = req.headers.authorization.split(' ')[1];
-             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-             req.user = await User.findById(decoded.id).select('-password');
-             next();
-        }
-    });
-    ```
+## 5. File Management system
+- **File Operations**: Create/Delete/Rename/Read via REST API.
+- **Drag-and-Drop**: Built using HTML5 DnD API to move files into folders or update directory structure.
+    - *Backend*: Updates `parentId` in MongoDB.
+
+## 6. Communication Features
+- **Real-Time Chat**: Socket.IO integration for instant messaging.
+- **Room Management**:
+    - **Groups**: Persistent group chats stored in MongoDB.
+    - **Direct Messages**: Dynamic rooms generated using sorted user IDs (`userA_userB`).
+- **Access Control**: Backend strictly validates that a requesting user is a member of the group or DM before returning chat history.
+
+## 7. Security
+- **RBAC**: Middleware checks User ID against Group Members array.
+- **Protected Routes**: API endpoints require valid Bearer token.

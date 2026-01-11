@@ -139,6 +139,26 @@ const FileItem = ({ item, level, onSelect, onDelete, onExpand, expandedIds, onMo
 const FileExplorer = ({ onFileSelect }) => {
     const [files, setFiles] = useState([]);
     const [allFilesRaw, setAllFilesRaw] = useState([]); // Store raw flat list for helpers
+
+    const getPath = (file) => {
+        let path = file.name;
+        let current = file;
+        while (current.parentId) {
+            const parent = allFilesRaw.find(f => f._id === current.parentId);
+            if (parent) {
+                path = `${parent.name}/${path}`;
+                current = parent;
+            } else {
+                break;
+            }
+        }
+        return path;
+    };
+
+    const handleFileSelectInternal = (file) => {
+        const path = getPath(file);
+        onFileSelect(file, path);
+    };
     const [expandedIds, setExpandedIds] = useState([]);
     const [newItemName, setNewItemName] = useState('');
     const [isCreating, setIsCreating] = useState(null); // 'file' or 'folder' or null
@@ -341,7 +361,7 @@ const FileExplorer = ({ onFileSelect }) => {
                             key={item._id}
                             item={item}
                             level={0}
-                            onSelect={onFileSelect}
+                            onSelect={handleFileSelectInternal}
                             onDelete={handleDelete}
                             onExpand={toggleExpand}
                             expandedIds={expandedIds}

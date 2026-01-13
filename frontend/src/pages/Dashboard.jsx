@@ -35,13 +35,30 @@ const Dashboard = () => {
     // Left Sidebar Vertical Split State (Height % of top section)
     const [topSectionHeight, setTopSectionHeight] = useState(50);
 
+    // modifiedFiles: { [fileId]: string } - Stores unsaved content
+    const [modifiedFiles, setModifiedFiles] = useState({});
+
     // Handle File Selection from Explorer
     const handleFileSelect = (file, path) => {
         setSelectedFile(file);
         if (file && file.type === 'file') {
-            setFileContent(file.content || '');
-            setFilePath(path || file.name); // Fallback to name if path missing
-            setActiveView('editor'); // Switch to editor when a file is opened
+            // Prefer modified content if exists, else load from file
+            const content = modifiedFiles[file._id] !== undefined ? modifiedFiles[file._id] : (file.content || '');
+            setFileContent(content);
+            setFilePath(path || file.name);
+            setActiveView('editor');
+            // Auto-close sidebar on mobile/small screens
+            setIsLeftSidebarOpen(false);
+        }
+    };
+
+    const handleEditorChange = (newContent) => {
+        setFileContent(newContent);
+        if (selectedFile) {
+            setModifiedFiles(prev => ({
+                ...prev,
+                [selectedFile._id]: newContent
+            }));
         }
     };
 
@@ -241,12 +258,14 @@ const Dashboard = () => {
                     {/* Main Content Content */}
                     <div className="flex-1 overflow-hidden relative">
                         <EditorCanvas
+                            key={filePath || 'empty'} // Force remount on file switch to prevent state leak
                             view={activeView}
                             fileContent={fileContent}
                             filePath={filePath}
                             roomId={activeChat?.id || activeChat?._id || 'general'}
                             isHost={isHost}
                             userName={currentUser.name}
+                            onCodeChange={handleEditorChange}
                         />
                     </div>
                 </div>

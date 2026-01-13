@@ -61,6 +61,11 @@ graph TD
 
 ## 3. Implemented Features
 -   **Authentication**: JWT + Bcrypt for secure login/signup.
+-   **Advanced Code Editor**:
+    -   **Monaco Engine**: Professional editing experience.
+    -   **Multi-Language**: Support for JS, Python, Java, C, C++.
+    -   **File Isolation**: State management for unsaved edits.
+    -   **UI**: VS Code-style tabs and responsive drawer.
 -   **File System**:
     -   CRUD operations for files and folders.
     -   Recursive structure.

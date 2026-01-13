@@ -27,7 +27,89 @@
     ```
 - **File Path Breadcrumbs**: Displays full directory path in editor header using recursive parent traversal.
 
-### 3. Infinite Canvas (Whiteboard)
+### 3. Advanced Code Editor (New)
+- **Monaco Engine**: Integrated VS Code's powerful editor engine (`@monaco-editor/react`) for a professional coding experience.
+    - *Features*: Syntax highlighting, minimap, line numbers, and automatic layout.
+    ```javascript
+    // Integrating Monaco in React
+    <Editor
+        language={getLanguage(fileName)}
+        value={code}
+        theme="light"
+        options={{ minimap: { enabled: true }, fontSize: 14 }}
+    />
+    ```
+- **Multi-Language Support**:
+    - Automatic detection and highlighting for 5 key languages: **JavaScript, Python, Java, C, C++**.
+    ```javascript
+    // Language detection logic
+    const getLanguage = (filename) => {
+        const ext = filename.split('.').pop();
+        switch(ext) {
+            case 'js': return 'javascript';
+            case 'py': return 'python';
+            case 'java': return 'java';
+            case 'c': return 'c';
+            case 'cpp': return 'cpp';
+            default: return 'plaintext';
+        }
+    };
+    ```
+    - Fallback support for Plain Text and Markdown.
+- **State Management**:
+    - **Tabbed UI**: Visual file tab with close button and file type icons.
+    - **File Isolation**: Unique state buffers for each file ensure unsaved changes are preserved when switching between files, preventing data leaks.
+    ```javascript
+    // Storing unsaved edits per file ID
+    const [modifiedFiles, setModifiedFiles] = useState({});
+
+    const handleEditorChange = (newContent) => {
+        setModifiedFiles(prev => ({
+            ...prev,
+            [currentFileId]: newContent // Keyed by unique File ID
+        }));
+    };
+    ```
+- **UX Refinements**:
+    - **Auto-Close**: File drawer automatically closes on selection (mobile) to maximize editor space.
+    - **Theming**: Clean "Classic Blue & White" light theme for readability.
+
+### 4. Code Execution Engine (New)
+- **Backend Execution**: Securely executes code on the server using `child_process`.
+    - *Implementation*: `codeController.js` writes code to a temporary file (`.js`, `.py`, `.c`, etc.) and executes it using the installed compiler/interpreter.
+    - *Security*: Generates unique UUIDs for filenames to prevent collisions and potential overwrites.
+    ```javascript
+    // Controller Logic
+    exec(command, { timeout: 10000 }, (error, stdout, stderr) => {
+        // Returns output or error
+    });
+    ```
+- **Live Output Panel**:
+    - **Responsive Design**: Automatically switches layout based on device.
+        - *Desktop*: Vertical Split (Code | Output) for side-by-side debugging.
+        - *Mobile*: Horizontal Split (Code / Output) for better vertical space.
+    - **Resizable**: Draggable divider lets users adjust the panel size dynamically.
+    - **Auto-Visibility**: Panel appears automatically when "Run" is clicked.
+    ```javascript
+    // Frontend Language Mapping
+    const langMap = {
+        'javascript': 'javascript',
+        'python': 'python',
+        'java': 'java', // v25
+        'c': 'c',       // GCC
+        'cpp': 'cpp',   // G++
+    };
+    ```
+    ```javascript
+    // Smooth Resizing Logic
+    requestAnimationFrame(() => {
+        if (!containerRef.current) return;
+        const newWidth = containerRect.right - e.clientX;
+        setOutputWidth(newWidth); // Updates via React State
+    }); 
+    ```
+
+### 5. Infinite Canvas (Whiteboard)
 - **Infinite Space**: Pan and Zoom support with a dynamic dot grid.
     - *Math*: `screenToWorld` and `worldToScreen` transformation functions handle coordinate mapping based on `offset` (pan) and `scale` (zoom).
 - **Vector-Based Rendering**: Shapes are stored as state objects (`{ type, x1, y1, ... }`) and re-rendered on the HTML5 Canvas 2D context.
@@ -41,7 +123,7 @@
     - **Auto-Hide**: Toolbar automatically hides on tool selection (Mobile) to maximize drawing space.
     - **Bottom Layout**: Toolkit positioned at bottom-screen for thumb accessibility on phones.
 
-### 4. Real-Time Collaboration (New)
+### 5. Real-Time Collaboration (New)
 - **Multi-User Sync**:
     - **Drawing**: Instant replication of strokes and shapes across all connected clients in the room using Socket.IO `canvas_update` events.
         ```javascript
@@ -64,18 +146,18 @@
         ```
     - **UI Indicators**: Toolbar shows a Lock/Unlock icon for hosts; members receive alerts if they try to draw while locked.
 
-## 5. File Management system
+## 6. File Management system
 - **File Operations**: Create/Delete/Rename/Read via REST API.
 - **Drag-and-Drop**: Built using HTML5 DnD API to move files into folders or update directory structure.
     - *Backend*: Updates `parentId` in MongoDB.
 
-## 6. Communication Features
+## 7. Communication Features
 - **Real-Time Chat**: Socket.IO integration for instant messaging.
 - **Room Management**:
     - **Groups**: Persistent group chats stored in MongoDB.
     - **Direct Messages**: Dynamic rooms generated using sorted user IDs (`userA_userB`).
 - **Access Control**: Backend strictly validates that a requesting user is a member of the group or DM before returning chat history.
 
-## 7. Security
+## 8. Security
 - **RBAC**: Middleware checks User ID against Group Members array.
 - **Protected Routes**: API endpoints require valid Bearer token.

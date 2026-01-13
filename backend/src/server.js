@@ -5,6 +5,7 @@ const http = require('http'); // Import http
 const { Server } = require('socket.io'); // Import Server from socket.io
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const codeRoutes = require('./routes/codeRoutes'); // Import code routes
 const Message = require('./models/Message'); // Import Message model
 
 dotenv.config();
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/users', authRoutes);
 app.use('/api/files', require('./routes/fileRoutes'));
+app.use('/api/code', codeRoutes);
 app.use('/api/groups', require('./routes/groupRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 
